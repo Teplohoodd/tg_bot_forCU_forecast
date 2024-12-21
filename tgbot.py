@@ -158,7 +158,11 @@ async def process_interval(callback: types.CallbackQuery, state: FSMContext):
     await state.clear()
     await callback.answer()
 
-
+#Обработчик иных сообщений
+@dp.message()
+async def handle_unknown_message(message: types.Message):
+    await message.answer('Извините, я не понял ваш запрос. Пожалуйста, напишите /start и следуйте инструкциям')
+    
 if __name__ == '__main__':
     try:
         asyncio.run(dp.start_polling(bot))

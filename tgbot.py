@@ -14,8 +14,8 @@ import numpy as np
 # Логирование
 logging.basicConfig(level=logging.INFO)
 
-API_TOKEN = "8032460771:AAE_Yu4hdZZaDyhmRJscXkwF6QA9eeMU1bA"
-WEATHER_API_KEY = "3144fd2e14708aaf035769fa7694778d"
+API_TOKEN = ""
+WEATHER_API_KEY = ""
 WEATHER_API_URL = "https://api.openweathermap.org/data/2.5/forecast"
 
 bot = Bot(token=API_TOKEN)

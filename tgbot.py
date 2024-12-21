@@ -73,23 +73,7 @@ async def get_weather(city, days):
         logging.error(f"Ошибка получения погоды: {e}")
         return None, None, None
 
-#Функция создания графика
-def create_weather_graph(dates, temps, city):
-    plt.figure(figsize=(12, 6))
-    plt.plot(dates, temps, marker='o', linestyle='-', linewidth=2, markersize=6)
-    plt.title(f'Прогноз температуры для {city}')
-    plt.xlabel('Дата и время')
-    plt.ylabel('Температура (°C)')
-    plt.grid(True)
-    plt.xticks(rotation=45)
-    plt.tight_layout()
-    
-    #Сохраняем график в буфер
-    buf = BytesIO()
-    plt.savefig(buf, format='png')
-    buf.seek(0)
-    plt.close()
-    return buf
+
 
 def get_interval_keyboard():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -123,16 +107,18 @@ async def process_start_point(message: types.Message, state: FSMContext):
     await state.set_state(WeatherStates.waiting_for_end_point)
     await message.answer("Теперь введите конечную точку маршрута:")
 
+@dp.message(WeatherStates.waiting_for_end_point)
+async def process_end_point(message: types.Message, state: FSMContext):
+    await state.update_data(end_point=message.text)
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[
+        [
+            InlineKeyboardButton(text="Да", callback_data="add_stops"),
+            InlineKeyboardButton(text="Нет", callback_data="no_stops")
+        ]
+    ])
+    
 
 
-@dp.callback_query(F.data.in_(["add_stops", "no_stops"]))
-async def process_stops_choice(callback: types.CallbackQuery, state: FSMContext):
-    if callback.data == "add_stops":
-        await state.set_state(WeatherStates.waiting_for_stops)
-        await callback.message.answer("Введите промежуточные остановки через запятую:")
-    else:
-        await callback.message.answer("Выберите интервал прогноза:", reply_markup=get_interval_keyboard())
-    await callback.answer()
 
 @dp.message(WeatherStates.waiting_for_stops)
 async def process_stops(message: types.Message, state: FSMContext):
@@ -166,30 +152,12 @@ async def process_interval(callback: types.CallbackQuery, state: FSMContext):
                     f"☁️ {forecast['description'].capitalize()}\n\n"
                 )
             await callback.message.answer(forecast_text)
-            
-            # Отправка графика
-            graph = create_weather_graph(dates, temps, point)
-            await callback.message.answer_photo(
-                types.BufferedInputFile(
-                    graph.getvalue(),
-                    filename=f'weather_forecast_{point}.png'
-                ),
-                caption=f"📊 График температуры для {point} на {interval} {'день' if interval == 1 else 'дня' if interval < 5 else 'дней'}"
-            )
-        else:
-            await callback.message.answer(f"❌ Не удалось получить прогноз для {point}")
+
     
     await callback.message.answer("🏁 Прогноз погоды для всего маршрута собран!")
     await state.clear()
     await callback.answer()
 
-@dp.error()
-async def error_handler(update: types.Update, exception: Exception):
-    logging.error(f"Ошибка при обработке запроса: {exception}")
-    try:
-        await update.message.answer("Произошла ошибка при обработке запроса. Попробуйте позже или начните сначала.")
-    except:
-        pass
 
 if __name__ == '__main__':
     try:

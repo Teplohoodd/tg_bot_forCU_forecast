@@ -11,7 +11,8 @@ import matplotlib.pyplot as plt
 from io import BytesIO
 import numpy as np
 
-
+# Логирование
+logging.basicConfig(level=logging.INFO)
 
 API_TOKEN = "8032460771:AAE_Yu4hdZZaDyhmRJscXkwF6QA9eeMU1bA"
 WEATHER_API_KEY = "3144fd2e14708aaf035769fa7694778d"
@@ -71,6 +72,24 @@ async def get_weather(city, days):
     except Exception as e:
         logging.error(f"Ошибка получения погоды: {e}")
         return None, None, None
+
+#Функция создания графика
+def create_weather_graph(dates, temps, city):
+    plt.figure(figsize=(12, 6))
+    plt.plot(dates, temps, marker='o', linestyle='-', linewidth=2, markersize=6)
+    plt.title(f'Прогноз температуры для {city}')
+    plt.xlabel('Дата и время')
+    plt.ylabel('Температура (°C)')
+    plt.grid(True)
+    plt.xticks(rotation=45)
+    plt.tight_layout()
+    
+    #Сохраняем график в буфер
+    buf = BytesIO()
+    plt.savefig(buf, format='png')
+    buf.seek(0)
+    plt.close()
+    return buf
 
 def get_interval_keyboard():
     keyboard = InlineKeyboardMarkup(inline_keyboard=[
@@ -147,6 +166,18 @@ async def process_interval(callback: types.CallbackQuery, state: FSMContext):
                     f"☁️ {forecast['description'].capitalize()}\n\n"
                 )
             await callback.message.answer(forecast_text)
+            
+            # Отправка графика
+            graph = create_weather_graph(dates, temps, point)
+            await callback.message.answer_photo(
+                types.BufferedInputFile(
+                    graph.getvalue(),
+                    filename=f'weather_forecast_{point}.png'
+                ),
+                caption=f"📊 График температуры для {point} на {interval} {'день' if interval == 1 else 'дня' if interval < 5 else 'дней'}"
+            )
+        else:
+            await callback.message.answer(f"❌ Не удалось получить прогноз для {point}")
     
     await callback.message.answer("🏁 Прогноз погоды для всего маршрута собран!")
     await state.clear()
